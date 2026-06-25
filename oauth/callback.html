@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OAuth Callback - Lewis Creator Agency</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, "PingFang TC", "Noto Sans CJK TC", sans-serif; }
+  body { background: #1a1a1a; color: #fff; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .container { max-width: 480px; text-align: center; padding: 40px 32px; background: #2a2a2a; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+  h1 { color: #ff7a3d; font-size: 28px; margin-bottom: 16px; }
+  p { font-size: 16px; line-height: 1.7; margin-bottom: 16px; color: #e0e0e0; }
+  .status { font-size: 14px; padding: 12px 16px; border-radius: 8px; margin: 24px 0; }
+  .status.success { background: #1b3d2f; color: #6fcf97; border: 1px solid #2e7d54; }
+  .status.error { background: #3d1b1b; color: #f08080; border: 1px solid #7d2e2e; }
+  .status.pending { background: #2e2e2e; color: #ddd; border: 1px solid #4a4a4a; }
+  code { background: #1a1a1a; padding: 2px 8px; border-radius: 4px; color: #ff7a3d; font-size: 14px; }
+  .footer { margin-top: 32px; font-size: 12px; color: #888; }
+  .footer a { color: #ff7a3d; text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>授權回傳處理中</h1>
+  <p>正在把您的 TikTok 授權結果傳回 <strong>Lewis Creator Agency</strong> 系統。</p>
+
+  <div id="status" class="status pending">⏳ 連線中、請稍候...</div>
+
+  <p id="message">如果 5 秒後沒有自動跳轉、請直接關閉本頁、回到原本的視窗。</p>
+
+  <div class="footer">
+    <p>本服務符合 TikTok Content Posting API 政策、所有授權資料安全處理。</p>
+    <p>聯絡 <a href="mailto:lewisjhung@gmail.com">lewisjhung@gmail.com</a> 或查看 <a href="./index.html">隱私政策</a>。</p>
+  </div>
+</div>
+
+<script>
+// OAuth callback parser
+(function () {
+  const urlParams = new URLSearchParams(window.location.search);
+  const code = urlParams.get('code');
+  const state = urlParams.get('state');
+  const errorParam = urlParams.get('error');
+  const errorDesc = urlParams.get('error_description');
+
+  const statusEl = document.getElementById('status');
+  const msgEl = document.getElementById('message');
+
+  if (errorParam) {
+    statusEl.className = 'status error';
+    statusEl.textContent = '❌ 授權失敗';
+    msgEl.innerHTML = `錯誤：<code>${errorParam}</code><br>${errorDesc || ''}<br><br>請回到 Lewis Creator Agency 系統重新嘗試。`;
+    return;
+  }
+
+  if (code) {
+    statusEl.className = 'status success';
+    statusEl.textContent = '✅ 授權成功';
+    msgEl.innerHTML = `授權碼已收到、正在轉送回系統。<br>請複製此頁網址或關閉視窗、系統會自動處理。<br><br><code id="code-display" style="display: block; word-break: break-all; margin-top: 12px; font-size: 12px;">${code.substring(0, 20)}...</code>`;
+
+    // 嘗試 postMessage 通知 opener（如果是 popup 開的）
+    if (window.opener) {
+      try {
+        window.opener.postMessage({ type: 'tiktok_oauth_callback', code: code, state: state }, '*');
+        setTimeout(() => window.close(), 2000);
+      } catch (e) {
+        console.warn('postMessage failed:', e);
+      }
+    }
+    return;
+  }
+
+  // 無 code 也無 error = 異常
+  statusEl.className = 'status error';
+  statusEl.textContent = '⚠️ 缺少授權資訊';
+  msgEl.innerHTML = '此頁應該從 TikTok 授權流程跳轉而來、不是直接訪問。<br><br>請回到 Lewis Creator Agency 系統重新發起授權。';
+})();
+</script>
+</body>
+</html>
